@@ -1,9 +1,10 @@
-// Archivo: MainMenu.java (con Diseño de Botones en Columnas)
+
 package steamjava;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.IOException;
 
 public class MainMenu extends JFrame {
 
@@ -14,7 +15,7 @@ public class MainMenu extends JFrame {
         this.steam = steam;
         this.loggedInPlayer = loggedInPlayer;
 
-        // --- Configuración de la Estética Steam ---
+      
         setTitle("Steam Main Menu");
         setSize(900, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -24,17 +25,15 @@ public class MainMenu extends JFrame {
         getContentPane().setBackground(bgColor);
         setLayout(new BorderLayout(10, 10));
 
-        // --- Panel Superior con Perfil de Usuario (sin cambios) ---
+       
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topPanel.setBackground(new Color(23, 26, 33));
-        // ... (código para mostrar el username y la foto de perfil) ...
+     
         add(topPanel, BorderLayout.NORTH);
 
-        // --- Panel Principal para los Botones ---
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(bgColor);
 
-        // Comprobamos el tipo de usuario para construir el panel principal
         if (loggedInPlayer.getTipoUsuario().equals("ADMIN")) {
             buildAdminPanel(mainPanel);
         } else {
@@ -45,19 +44,18 @@ public class MainMenu extends JFrame {
     }
 
     private void buildAdminPanel(JPanel mainPanel) {
-        // Usamos GridLayout para crear dos columnas principales
-        mainPanel.setLayout(new GridLayout(1, 2, 30, 0)); // 1 fila, 2 columnas, 30px de espacio horizontal
-        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20)); // Margen
+       
+        mainPanel.setLayout(new GridLayout(1, 2, 30, 0)); 
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // --- Columna 1: Gestión de Juegos ---
+        
         JPanel gamesPanel = new JPanel();
-        gamesPanel.setLayout(new BoxLayout(gamesPanel, BoxLayout.Y_AXIS)); // Layout vertical
-        gamesPanel.setOpaque(false); // Hacemos el panel transparente
-
+        gamesPanel.setLayout(new BoxLayout(gamesPanel, BoxLayout.Y_AXIS)); 
+        gamesPanel.setOpaque(false); 
         JLabel gamesTitle = new JLabel("Gestión de Juegos");
         styleTitle(gamesTitle);
         gamesPanel.add(gamesTitle);
-        gamesPanel.add(Box.createRigidArea(new Dimension(0, 15))); // Espaciador
+        gamesPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         JButton addGameBtn = new JButton("Agregar Juego");
         JButton modifyGameBtn = new JButton("Modificar Juego");
@@ -84,7 +82,7 @@ public class MainMenu extends JFrame {
         usersPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         JButton viewUsersBtn = new JButton("Ver Jugadores");
-        JButton reportUserBtn = new JButton("Generar Reporte");
+        JButton reportUserBtn = new JButton("Generar Reporte"); // Este es el botón que cambiamos
 
         styleButton(viewUsersBtn);
         styleButton(reportUserBtn);
@@ -93,14 +91,35 @@ public class MainMenu extends JFrame {
         usersPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         usersPanel.add(reportUserBtn);
 
-        // Añadir las dos columnas al panel principal
-        mainPanel.add(gamesPanel);
+        mainPanel.add(gamesPanel); 
         mainPanel.add(usersPanel);
 
-        // --- Action Listeners para Admin ---
-        addGameBtn.addActionListener(e -> {
-            this.dispose();
-            new AddGameWindow(steam).setVisible(true);
+       
+        addGameBtn.addActionListener(e -> new AddGameWindow(steam).setVisible(true));
+        modifyGameBtn.addActionListener(e -> new ManageGameWindow(steam).setVisible(true));
+        deactivateGameBtn.addActionListener(e -> new ManageGameWindow(steam).setVisible(true));
+        viewUsersBtn.addActionListener(e -> new ManagePlayersWindow(steam).setVisible(true));
+
+       
+        reportUserBtn.addActionListener(e -> {
+            String playerCodeStr = JOptionPane.showInputDialog(
+                    this,
+                    "Introduce el código del jugador para generar el reporte:",
+                    "Generar Reporte",
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (playerCodeStr != null && !playerCodeStr.isBlank()) {
+                try {
+                    int playerCode = Integer.parseInt(playerCodeStr);
+                  
+                    steam.reportForClient(playerCode);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Por favor, introduce un código numérico válido.", "Formato Inválido", JOptionPane.ERROR_MESSAGE);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(this, "Error de archivo al generar el reporte.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         });
 
     }
@@ -120,13 +139,12 @@ public class MainMenu extends JFrame {
         catalogBtn.addActionListener(e -> {
             new Catalogo(steam, loggedInPlayer).setVisible(true);
         });
-       
+
         profileBtn.addActionListener(e -> {
             new ProfileWindow(steam, loggedInPlayer).setVisible(true);
         });
     }
 
-    
     private void styleButton(JButton button) {
         button.setBackground(new Color(42, 71, 94));
         button.setForeground(Color.WHITE);

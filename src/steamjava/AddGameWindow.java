@@ -16,7 +16,8 @@ public class AddGameWindow extends JFrame {
     private JSpinner ageSpinner, priceSpinner;
     private JComboBox<String> osComboBox;
     private JLabel imagePreviewLabel;
-
+    
+    
     public AddGameWindow(Steam steam) {
         this.steam = steam;
         this.coverImagePath = null;
@@ -26,7 +27,6 @@ public class AddGameWindow extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-     
         Color bgColor = new Color(27, 40, 56);
         Color textColor = Color.WHITE;
         getContentPane().setBackground(bgColor);
@@ -41,19 +41,20 @@ public class AddGameWindow extends JFrame {
         titleField = new JTextField(25);
         add(titleField, gbc);
 
+       
         gbc.gridx = 0; gbc.gridy = 1;
         add(new JLabel("Género:") {{ setForeground(textColor); }}, gbc);
         gbc.gridx = 1; gbc.gridy = 1;
         genreField = new JTextField(25);
         add(genreField, gbc);
 
-        
         gbc.gridx = 0; gbc.gridy = 2;
         add(new JLabel("Sistema Operativo:") {{ setForeground(textColor); }}, gbc);
         gbc.gridx = 1; gbc.gridy = 2;
         osComboBox = new JComboBox<>(new String[]{"Windows", "Mac", "Linux"});
         add(osComboBox, gbc);
 
+     
         gbc.gridx = 0; gbc.gridy = 3;
         add(new JLabel("Edad Mínima:") {{ setForeground(textColor); }}, gbc);
         gbc.gridx = 1; gbc.gridy = 3;
@@ -66,7 +67,7 @@ public class AddGameWindow extends JFrame {
         priceSpinner = new JSpinner(new SpinnerNumberModel(59.99, 0.0, 10000.0, 0.01));
         add(priceSpinner, gbc);
 
-       
+        // --- Fila 5: Selector de Carátula ---
         gbc.gridx = 0; gbc.gridy = 5;
         JButton selectImageButton = new JButton("Elegir Carátula...");
         styleButton(selectImageButton);
@@ -77,14 +78,14 @@ public class AddGameWindow extends JFrame {
         imagePreviewLabel.setForeground(textColor);
         add(imagePreviewLabel, gbc);
         
-     
+        // --- Fila 6: Botón para Agregar ---
         gbc.gridx = 1; gbc.gridy = 6;
         gbc.anchor = GridBagConstraints.CENTER;
         JButton addButton = new JButton("Agregar Juego");
         styleButton(addButton);
         add(addButton, gbc);
 
-      
+        // --- Action Listeners ---
         selectImageButton.addActionListener(e -> chooseImage());
         addButton.addActionListener(e -> performAddGame());
     }
@@ -104,7 +105,6 @@ public class AddGameWindow extends JFrame {
     }
 
     private void performAddGame() {
-      
         if (titleField.getText().isBlank() || genreField.getText().isBlank() || coverImagePath == null) {
             JOptionPane.showMessageDialog(this, "Por favor, completa todos los campos y elige una carátula.", "Datos Incompletos", JOptionPane.WARNING_MESSAGE);
             return;
@@ -114,16 +114,16 @@ public class AddGameWindow extends JFrame {
         String genero = genreField.getText();
         int edadMinima = (Integer) ageSpinner.getValue();
         double precio = (Double) priceSpinner.getValue();
-        char so = 'W'; 
-        switch ((String) osComboBox.getSelectedItem()) {
-            case "Mac": so = 'M'; break;
-            case "Linux": so = 'L'; break;
-        }
-      
+        char so = switch ((String) osComboBox.getSelectedItem()) {
+            case "Mac" -> 'M';
+            case "Linux" -> 'L';
+            default -> 'W';
+        };
+        
         try {
             steam.addGame(titulo, genero, so, edadMinima, precio, coverImagePath);
             JOptionPane.showMessageDialog(this, "¡Juego agregado al catálogo exitosamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            dispose(); 
+            dispose();
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Error al guardar el juego en el archivo.", "Error de Archivo", JOptionPane.ERROR_MESSAGE);
         }

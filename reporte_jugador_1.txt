@@ -1,0 +1,9 @@
+REPORTE CLIENTE: Samuel (username: Sam)
+Código cliente: 1
+Fecha de nacimiento: 2025-09-01 (0 años)
+Estado: ACTIVO
+Total downloads: 0
+
+HISTORIAL DE DESCARGAS:
+FECHA(YYYY-MM-DD) | DOWNLOAD ID | GAME CODE | GAME NAME | PRECIO | GÉNERO
+---------------------------------------------------------------------------------

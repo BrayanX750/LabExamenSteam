@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import javax.swing.JOptionPane;
 
 public class Steam {
 
@@ -182,99 +183,77 @@ public class Steam {
         }
         return new String(chars).trim();
     }
+    
+    
+    public boolean reportForClient(int codeClient) throws IOException {
+    Player player = findPlayerByCode(codeClient);
 
-    public boolean reportForClient(int codeClient, String txtFile) throws IOException {
-        playerFile.seek(0);
-        int p_code = -1;
-        String p_username = null;
-        String p_nombre = null;
-        long p_nac = 0L;
-        int p_totalDls = 0;
-        boolean p_estado = false;
+    if (player == null) {
+        JOptionPane.showMessageDialog(null, "NO SE PUEDE CREAR REPORTE: Jugador con código " + codeClient + " no existe o está inactivo.");
+        return false;
+    }
 
-        while (playerFile.getFilePointer() < playerFile.length()) {
-            long startPosition = playerFile.getFilePointer();
-            int code = playerFile.readInt();
-
-            if (code == codeClient) {
-                p_code = code;
-                p_username = readFixedString(playerFile, 30);
-                readFixedString(playerFile, 30);
-                p_nombre = readFixedString(playerFile, 50);
-                p_nac = playerFile.readLong();
-                p_totalDls = playerFile.readInt();
-                readFixedString(playerFile, 100);
-                readFixedString(playerFile, 10);
-                p_estado = playerFile.readBoolean();
-                break;
-            }
-
-            playerFile.seek(startPosition + PLAYER_SIZE);
+    // El nombre del archivo ahora es fijo y está dentro de la carpeta /steam
+    String reportPath = "steam/cliente.txt";
+    
+    int edad = 0;
+    if (player.nacimiento > 0) {
+        java.util.Calendar n = java.util.Calendar.getInstance();
+        n.setTimeInMillis(player.nacimiento);
+        java.util.Calendar h = java.util.Calendar.getInstance();
+        edad = h.get(java.util.Calendar.YEAR) - n.get(java.util.Calendar.YEAR);
+        if (h.get(java.util.Calendar.DAY_OF_YEAR) < n.get(java.util.Calendar.DAY_OF_YEAR)) {
+            edad--;
         }
+    }
 
-        if (p_code == -1) {
-            javax.swing.JOptionPane.showMessageDialog(null, "NO SE PUEDE CREAR REPORTE");
-            return false;
-        }
+    SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd");
+    String nacTxt = (player.nacimiento > 0) ? f.format(new java.util.Date(player.nacimiento)) : "N/A";
+    String estadoTxt = player.estado ? "ACTIVO" : "DESACTIVO";
 
-        int edad = 0;
-        if (p_nac > 0) {
-            java.util.Calendar n = java.util.Calendar.getInstance();
-            n.setTimeInMillis(p_nac);
-            java.util.Calendar h = java.util.Calendar.getInstance();
-            edad = h.get(java.util.Calendar.YEAR) - n.get(java.util.Calendar.YEAR);
-            if (h.get(java.util.Calendar.DAY_OF_YEAR) < n.get(java.util.Calendar.DAY_OF_YEAR)) {
-                edad--;
-            }
-        }
-
-        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd");
-        String nacTxt = (p_nac > 0) ? f.format(new java.util.Date(p_nac)) : "";
-        String estadoTxt = p_estado ? "ACTIVO" : "DESACTIVO";
-
-        FileWriter fw = new FileWriter(txtFile, false);
-        PrintWriter pw = new PrintWriter(fw);
-
-        pw.println("REPORTE CLIENTE: " + p_nombre + " (username: " + p_username + ")");
-        pw.println("Código cliente: " + p_code);
+    try (PrintWriter pw = new PrintWriter(new FileWriter(reportPath))) { // Usamos la nueva ruta fija
+        pw.println("REPORTE CLIENTE: " + player.nombre + " (username: " + player.username + ")");
+        pw.println("Código cliente: " + player.code);
         pw.println("Fecha de nacimiento: " + nacTxt + " (" + edad + " años)");
         pw.println("Estado: " + estadoTxt);
-        pw.println("Total downloads: " + p_totalDls);
+        pw.println("Total downloads: " + player.contadorDownloads);
+        pw.println();
         pw.println("HISTORIAL DE DESCARGAS:");
-        pw.println("FECHA(YYYY-MM-DD) | DOWNLOAD ID | GAME CODE | GAME NAME | PRICE | GENRE");
+        pw.println("FECHA(YYYY-MM-DD) | DOWNLOAD ID | GAME CODE | GAME NAME | PRECIO | GÉNERO");
+        pw.println("---------------------------------------------------------------------------------");
 
         File dir = new File("steam/downloads");
-        File[] files = dir.listFiles((d, name) -> name.startsWith("download_") && name.endsWith(".stm"));
+        File[] files = dir.listFiles((d, name) -> name.endsWith(".stm"));
+
         if (files != null) {
             for (File fdl : files) {
-                RandomAccessFile draf = new RandomAccessFile(fdl, "r");
-                int d_code = draf.readInt();
-                int d_player = draf.readInt();
-                String d_playerName = draf.readUTF();
-                int d_gameCode = draf.readInt();
-                String d_gameName = draf.readUTF();
-                int imgLen = draf.readInt();
-                if (imgLen > 0) {
-                    draf.seek(draf.getFilePointer() + imgLen);
-                }
-                double d_price = draf.readDouble();
-                long d_fecha = draf.readLong();
-                draf.close();
+                try (RandomAccessFile draf = new RandomAccessFile(fdl, "r")) {
+                    int d_code = draf.readInt();
+                    int d_player_code = draf.readInt();
 
-                if (d_player == p_code) {
-                    String d_fechaTxt = f.format(new java.util.Date(d_fecha));
-                    String genero = getGeneroByGameCode(d_gameCode);
-                    pw.println(d_fechaTxt + " | " + d_code + " | " + d_gameCode + " | " + d_gameName + " | " + String.format("%.2f", d_price) + " | " + genero);
+                    if (d_player_code == player.code) {
+                        draf.readUTF();
+                        int d_gameCode = draf.readInt();
+                        String d_gameName = draf.readUTF();
+                        draf.readInt();
+                        double d_price = draf.readDouble();
+                        long d_fecha = draf.readLong();
+                        
+                        String d_fechaTxt = f.format(new java.util.Date(d_fecha));
+                        String genero = getGeneroByGameCode(d_gameCode);
+                        
+                        pw.printf("%-18s | %-11d | %-9d | %-20s | $%-9.2f | %s%n",
+                                  d_fechaTxt, d_code, d_gameCode, d_gameName, d_price, genero);
+                    }
                 }
             }
         }
-
-        pw.flush();
-        pw.close();
-
-        javax.swing.JOptionPane.showMessageDialog(null, "REPORTE CREADO");
-        return true;
     }
+
+    JOptionPane.showMessageDialog(null, "Reporte generado/actualizado en: " + reportPath);
+    return true;
+}
+
 
     private String getGeneroByGameCode(int codeGame) throws IOException {
         long keep = gamesFile.getFilePointer();
@@ -467,13 +446,13 @@ public class Steam {
         File[] downloadFiles = downloadsDir.listFiles();
 
         if (downloadFiles == null) {
-            return downloadedGames; 
+            return downloadedGames;
         }
 
         for (File file : downloadFiles) {
             if (file.isFile() && file.getName().endsWith(".stm")) {
                 try (RandomAccessFile downloadFile = new RandomAccessFile(file, "r")) {
-                    downloadFile.readInt(); 
+                    downloadFile.readInt();
                     int filePlayerCode = downloadFile.readInt();
 
                     if (filePlayerCode == playerCode) {
@@ -490,4 +469,64 @@ public class Steam {
         return downloadedGames;
     }
 
+  
+    public ArrayList<Game> getAllGamesForAdmin() throws IOException {
+        ArrayList<Game> lista = new ArrayList<>();
+        gamesFile.seek(0);
+        while (gamesFile.getFilePointer() < gamesFile.length()) {
+            int code = gamesFile.readInt();
+            String titulo = readFixedString(gamesFile, 50);
+            String genero = readFixedString(gamesFile, 20);
+            char so = gamesFile.readChar();
+            int edadMinima = gamesFile.readInt();
+            double precio = gamesFile.readDouble();
+            int downloads = gamesFile.readInt();
+            String foto = readFixedString(gamesFile, 100);
+            boolean activo = gamesFile.readBoolean();
+
+            
+            Game g = new Game(code, titulo, genero, so, edadMinima, precio, downloads, foto, activo);
+            lista.add(g);
+        }
+        return lista;
+    }
+
+    public boolean toggleGameStatus(int gameCode) throws IOException {
+        gamesFile.seek(0);
+        while (gamesFile.getFilePointer() < gamesFile.length()) {
+            long startPosition = gamesFile.getFilePointer();
+            int code = gamesFile.readInt();
+            if (code == gameCode) {
+            
+                long statusPosition = startPosition + GAME_SIZE - 1;
+                gamesFile.seek(statusPosition);
+                boolean currentStatus = gamesFile.readBoolean();
+                gamesFile.seek(statusPosition);
+                gamesFile.writeBoolean(!currentStatus); 
+                return true;
+            }
+            gamesFile.seek(startPosition + GAME_SIZE);
+        }
+        return false;
+    }
+    
+    public ArrayList<Player> getAllPlayersForAdmin() throws IOException {
+    ArrayList<Player> players = new ArrayList<>();
+    playerFile.seek(0);
+    while (playerFile.getFilePointer() < playerFile.length()) {
+        int code = playerFile.readInt();
+        String username = readFixedString(playerFile, 30);
+        String password = readFixedString(playerFile, 30);
+        String nombre = readFixedString(playerFile, 50);
+        long nacimiento = playerFile.readLong();
+        int downloads = playerFile.readInt();
+        String foto = readFixedString(playerFile, 100);
+        String tipo = readFixedString(playerFile, 10);
+        boolean activo = playerFile.readBoolean();
+        
+        players.add(new Player(code, username, password, nombre, nacimiento, downloads, foto, tipo, activo));
+    }
+    return players;
+}
+    
 }
