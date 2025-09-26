@@ -4,7 +4,6 @@
  */
 package steamjava;
 
-
 import java.io.RandomAccessFile;
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +18,7 @@ public class Steam {
     public static final int GAME_SIZE = 163;
     public static final int PLAYER_SIZE = 249;
 
-    public Steam(){
+    public Steam() {
         inicializar();
     }
 
@@ -71,15 +70,22 @@ public class Steam {
     public void addGame(String titulo, String genero, char so, int edadMinima, double precio, String foto) throws IOException {
         int code = generarCodigoGame();
         gamesFile.seek(gamesFile.length());
+
         gamesFile.writeInt(code);
-        gamesFile.writeUTF(titulo == null ? "" : titulo);
-        gamesFile.writeUTF(genero == null ? "" : genero);
+        writeFixedString(gamesFile, titulo, 50); 
+        writeFixedString(gamesFile, genero, 20); 
         gamesFile.writeChar(so);
         gamesFile.writeInt(edadMinima);
         gamesFile.writeDouble(precio);
-        gamesFile.writeInt(0);
-        gamesFile.writeUTF(foto == null ? "" : foto);
-        gamesFile.writeBoolean(true); // activo por defecto
+        gamesFile.writeInt(0); 
+        writeFixedString(gamesFile, foto, 100); 
+        gamesFile.writeBoolean(true); 
+    }
+
+    private void writeFixedString(RandomAccessFile raf, String text, int size) throws IOException {
+        StringBuilder sb = new StringBuilder(text != null ? text : "");
+        sb.setLength(size);
+        raf.writeChars(sb.toString());
     }
 
     public void addPlayer(String username, String password, String nombre, long nacimientoMs, String foto, String tipoUsuario, boolean estado) throws IOException {
